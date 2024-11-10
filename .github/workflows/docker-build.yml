@@ -6,9 +6,17 @@ on:
       - "**"
     tags-ignore:
       - "**"
+    paths:
+      - "consolidator"
+      - "hub"
+      - "kafka-admin-client"
   pull_request:
     branches:
       - "**"
+    paths:
+      - "consolidator"
+      - "hub"
+      - "kafka-admin-client"
   workflow_dispatch:
 
 jobs:
