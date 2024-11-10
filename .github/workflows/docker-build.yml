@@ -10,6 +10,7 @@ on:
       - "consolidator"
       - "hub"
       - "kafka-admin-client"
+      - "*.Dockerfile"
   pull_request:
     branches:
       - "**"
@@ -17,6 +18,7 @@ on:
       - "consolidator"
       - "hub"
       - "kafka-admin-client"
+      - "*.Dockerfile"
   workflow_dispatch:
 
 jobs:

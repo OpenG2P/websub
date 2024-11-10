@@ -13,7 +13,7 @@ RUN cd /kafka-admin-client && \
 COPY hub /hub
 RUN bal build /hub
 
-FROM eclipse-temurin:23.0.1_11-jre-alpine
+FROM eclipse-temurin:11.0.25_9-jre-alpine
 
 RUN apk add bash wget curl gettext
 
