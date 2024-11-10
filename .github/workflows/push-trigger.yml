@@ -89,7 +89,7 @@ jobs:
           path: ./
       - name: Unzip the kafka-admin-client
         run: |
-          unzip ${{ env.KAFKA_ADMIN_BUILD_ARTIFACT }}.zip -d ${{ env.SERVICE_LOCATION }}
+          unzip ${{ env.KAFKA_ADMIN_BUILD_ARTIFACT }}.zip
       - name: Setup branch and env
         run: |
           # Strip git ref prefix from version
@@ -157,7 +157,7 @@ jobs:
           path: ./
       - name: Unzip the kafka-admin-client
         run: |
-          unzip ${{ env.KAFKA_ADMIN_BUILD_ARTIFACT }}.zip -d ${{ env.SERVICE_LOCATION }}
+          unzip ${{ env.KAFKA_ADMIN_BUILD_ARTIFACT }}.zip
       - name: Setup branch and env
         run: |
           # Strip git ref prefix from version
