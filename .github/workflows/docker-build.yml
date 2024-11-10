@@ -1,0 +1,85 @@
+name: Docker build and push
+
+on:
+  push:
+    branches:
+      - "**"
+    tags-ignore:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+jobs:
+  docker-build-consolidator:
+    name: Docker Build Consolidator
+    runs-on: ubuntu-latest
+    env:
+      NAMESPACE: ${{ secrets.docker_hub_organisation || 'mosipdev' }}
+      SERVICE_NAME: 'consolidator-websub-service'
+    steps:
+      - uses: actions/checkout@v3
+      - name: Docker build
+        run: |
+          BRANCH_NAME=$(echo ${{ github.ref }} | sed -e 's,.*/\(.*\),\1,')
+          IMAGE_ID=$NAMESPACE/$SERVICE_NAME
+
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          VERSION=$BRANCH_NAME
+          if [[ $BRANCH_NAME == master || $BRANCH_NAME == main ]]; then
+            VERSION=develop
+          fi
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+          echo IMAGE_ID=$IMAGE_ID >> $GITHUB_ENV
+          echo VERSION=$VERSION >> $GITHUB_ENV
+
+          docker build . \
+            --file consolidator.Dockerfile \
+            --tag $IMAGE_ID:$VERSION
+          if [[ '${{ secrets.docker_hub_token }}' != '' && '${{ secrets.docker_hub_actor }}' != '' && '${{ github.event_name }}' != 'pull_request' ]]; then
+            echo DOCKER_PUSH=true >> $GITHUB_ENV
+          fi
+      - name: Docker Push
+        if: env.DOCKER_PUSH == 'true'
+        run: |
+          echo "${{ secrets.docker_hub_token }}" | docker login -u ${{ secrets.docker_hub_actor }} --password-stdin
+          docker push ${{ env.IMAGE_ID }}:${{ env.VERSION }}
+
+  docker-build-websub:
+    name: Docker Build Websub
+    runs-on: ubuntu-latest
+    env:
+      NAMESPACE: ${{ secrets.docker_hub_organisation || 'mosipdev' }}
+      SERVICE_NAME: 'websub-service'
+    steps:
+      - uses: actions/checkout@v3
+      - name: Docker build
+        run: |
+          BRANCH_NAME=$(echo ${{ github.ref }} | sed -e 's,.*/\(.*\),\1,')
+          IMAGE_ID=$NAMESPACE/$SERVICE_NAME
+
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          VERSION=$BRANCH_NAME
+          if [[ $BRANCH_NAME == master || $BRANCH_NAME == main ]]; then
+            VERSION=develop
+          fi
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+          echo IMAGE_ID=$IMAGE_ID >> $GITHUB_ENV
+          echo VERSION=$VERSION >> $GITHUB_ENV
+
+          docker build . \
+            --file hub.Dockerfile \
+            --tag $IMAGE_ID:$VERSION
+          if [[ '${{ secrets.docker_hub_token }}' != '' && '${{ secrets.docker_hub_actor }}' != '' && '${{ github.event_name }}' != 'pull_request' ]]; then
+            echo DOCKER_PUSH=true >> $GITHUB_ENV
+          fi
+      - name: Docker Push
+        if: env.DOCKER_PUSH == 'true'
+        run: |
+          echo "${{ secrets.docker_hub_token }}" | docker login -u ${{ secrets.docker_hub_actor }} --password-stdin
+          docker push ${{ env.IMAGE_ID }}:${{ env.VERSION }}
