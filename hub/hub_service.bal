@@ -312,7 +312,7 @@ service object {
         if (topicIFNotExist is error) {
             return error websubhub:UpdateMessageError(topicIFNotExist.message());
         }
-        log:printDebug("Received publish message", topic = msg.hubTopic, message = msg.cloneReadOnly());
+        log:printDebug("Received publish message", topic = msg.hubTopic, updateMessage = msg.cloneReadOnly());
         error? errorResponse = persist:addUpdateMessage(topicName, msg);
         // TODO: remove this condition
         if errorResponse is websubhub:UpdateMessageError {

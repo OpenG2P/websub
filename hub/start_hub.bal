@@ -268,7 +268,7 @@ isolated function notifySubscribers(kafka:ConsumerRecord[] records, websubhub:Hu
         websubhub:ContentDistributionMessage|error message = deSerializeKafkaRecord(kafkaRecord);
 
         if (message is websubhub:ContentDistributionMessage) {
-            log:printDebug("notifying subscriber with message", message = message.cloneReadOnly(), topic = topic, callback = callback, offset = kafkaRecord.offset);
+            log:printDebug("notifying subscriber with message", contentDistributionMessage = message.cloneReadOnly(), topic = topic, callback = callback, offset = kafkaRecord.offset);
             websubhub:ContentDistributionSuccess|websubhub:SubscriptionDeletedError|websubhub:Error response = clientEp->notifyContentDistribution(message);
             if (response is websubhub:SubscriptionDeletedError) {
                 log:printError("Subscription Deletion Error occurred while sending notification to subscriber ", topic = topic, callback = callback, offset = kafkaRecord.offset,response = response.cloneReadOnly().toString());

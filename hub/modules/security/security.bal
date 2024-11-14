@@ -33,7 +33,7 @@ public isolated function authorizeSubscriber(http:Headers headers, string topic)
     string token = check getToken(headers);
     log:printDebug("getting token for Subscriber from request", topic = topic);
     jwt:Payload response = check getValidatedTokenPayload(token);
-    string[] rolesArr = response.hasKey(config:SECURITY_JWT_ROLES_FIELD) && response[config:SECURITY_JWT_ROLES_FIELD] is string[] ? <string[]> response[config:SECURITY_JWT_ROLES_FIELD] : [];
+    json[] rolesArr = (response.hasKey(config:SECURITY_JWT_ROLES_FIELD) && response[config:SECURITY_JWT_ROLES_FIELD] is json[]) ? <json[]> response[config:SECURITY_JWT_ROLES_FIELD] : [];
     string userId = <string> response[config:SECURITY_JWT_USERID_FIELD];
     log:printDebug("received response for subscriber from auth service", userId = userId, roles = rolesArr, topic = topic);
     if (userId.startsWith(config:PARTNER_USER_ID_PREFIX)) {
@@ -56,7 +56,7 @@ public isolated function authorizePublisher(http:Headers headers, string topic) 
     string token = check getToken(headers);
     log:printDebug("got token for publisher from request", topic = topic);
     jwt:Payload response = check getValidatedTokenPayload(token);
-    string[] rolesArr = response.hasKey(config:SECURITY_JWT_ROLES_FIELD) && response[config:SECURITY_JWT_ROLES_FIELD] is string[] ? <string[]> response[config:SECURITY_JWT_ROLES_FIELD] : [];
+    json[] rolesArr = (response.hasKey(config:SECURITY_JWT_ROLES_FIELD) && response[config:SECURITY_JWT_ROLES_FIELD] is json[]) ? <json[]> response[config:SECURITY_JWT_ROLES_FIELD] : [];
     string? userId = response.hasKey(config:SECURITY_JWT_USERID_FIELD) && response[config:SECURITY_JWT_USERID_FIELD] is string ? <string> response[config:SECURITY_JWT_USERID_FIELD] : null;
     log:printDebug("received response for publisher from auth service", userId = userId, roles = rolesArr, topic = topic);
     string? partnerID = buildPartnerId(topic);
@@ -110,16 +110,16 @@ isolated function getValidatedTokenPayload(string token) returns jwt:Payload|jwt
     return jwt:validate(token, validatorConfig);
 }
 
-isolated function isPublisherAuthorized(string? partnerID, string rolePrefix, string[] rolesArr) returns boolean {
+isolated function isPublisherAuthorized(string? partnerID, string rolePrefix, json[] rolesArr) returns boolean {
     if partnerID is string {
-        foreach string role in rolesArr {
-            if role == rolePrefix.concat(SUFFIX_ALL_INDIVIDUAL) {
+        foreach json role in rolesArr {
+            if role.toString() == rolePrefix.concat(SUFFIX_ALL_INDIVIDUAL) {
                 return true;
             }
         }
     } else {
-        foreach string role in rolesArr {
-            if role == rolePrefix.concat(SUFFIX_GENERAL) {
+        foreach json role in rolesArr {
+            if role.toString() == rolePrefix.concat(SUFFIX_GENERAL) {
                 return true;
             }
         }
@@ -127,17 +127,17 @@ isolated function isPublisherAuthorized(string? partnerID, string rolePrefix, st
     return false;
 }
 
-isolated function isSubscriberAuthorized(string? partnerID, string rolePrefix, string[] rolesArr, string userId)
+isolated function isSubscriberAuthorized(string? partnerID, string rolePrefix, json[] rolesArr, string userId)
                                         returns boolean {
     if partnerID is string {
-        foreach string role in rolesArr {
-            if role == rolePrefix.concat(SUFFIX_INDIVIDUAL) && partnerID == userId {
+        foreach json role in rolesArr {
+            if role.toString() == rolePrefix.concat(SUFFIX_INDIVIDUAL) && partnerID == userId {
                 return true;
             }
         }
     } else {
-        foreach string role in rolesArr {
-            if role == rolePrefix.concat(SUFFIX_GENERAL) {
+        foreach json role in rolesArr {
+            if role.toString() == rolePrefix.concat(SUFFIX_GENERAL) {
                 return true;
             }
         }
