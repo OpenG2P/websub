@@ -72,7 +72,7 @@ isolated function getToken(http:Headers headers) returns string|error {
     string|error authHeader = check headers.getHeader("Authorization");
     if !(authHeader is error) {
         if authHeader.startsWith("Bearer") {
-            return authHeader.trim();
+            return authHeader.substring("Bearer".length()).trim();
         }
     }
     return error("Authorization token cannot be found");
