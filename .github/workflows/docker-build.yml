@@ -7,17 +7,17 @@ on:
     tags-ignore:
       - "**"
     paths:
-      - "consolidator"
-      - "hub"
-      - "kafka-admin-client"
+      - "consolidator/**"
+      - "hub/**"
+      - "kafka-admin-client/**"
       - "*.Dockerfile"
   pull_request:
     branches:
       - "**"
     paths:
-      - "consolidator"
-      - "hub"
-      - "kafka-admin-client"
+      - "consolidator/**"
+      - "hub/**"
+      - "kafka-admin-client/**"
       - "*.Dockerfile"
   workflow_dispatch:
 
