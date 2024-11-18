@@ -1,6 +1,6 @@
-FROM maven:3.9.9-eclipse-temurin-11 AS builder
+FROM maven:3.9.9-eclipse-temurin-17 AS builder
 
-ARG ballerina_version=2201.0.0
+ARG ballerina_version=2201.9.0
 ARG ballerina_download_url=https://dist.ballerina.io/downloads/${ballerina_version}/ballerina-${ballerina_version}-swan-lake-linux-x64.deb
 
 RUN wget -q --show-progress ${ballerina_download_url} -O ballerina-linux-installer-x64.deb && \
@@ -13,7 +13,7 @@ RUN cd /kafka-admin-client && \
 COPY hub /hub
 RUN bal build /hub
 
-FROM eclipse-temurin:11.0.25_9-jre-alpine
+FROM eclipse-temurin:17.0.13_11-jre-alpine
 
 RUN apk add bash wget curl gettext
 

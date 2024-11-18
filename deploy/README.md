@@ -1,6 +1,0 @@
-# WebSub
-
-## Install
-```
-./install.sh
-``` 
