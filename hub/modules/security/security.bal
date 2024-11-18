@@ -15,15 +15,14 @@
 // under the License.
 
 import ballerina/http;
-import ballerina/regex;
 import ballerina/log;
+import ballerina/jwt;
+
 import kafkaHub.config;
 
 const string SUFFIX_GENERAL = "_GENERAL";
 const string SUFFIX_ALL_INDIVIDUAL = "_ALL_INDIVIDUAL";
 const string SUFFIX_INDIVIDUAL = "_INDIVIDUAL";
-
-final http:Client clientEP = check new (config:MOSIP_AUTH_BASE_URL);
 
 # Authorize the subscriber.
 #
@@ -33,11 +32,10 @@ final http:Client clientEP = check new (config:MOSIP_AUTH_BASE_URL);
 public isolated function authorizeSubscriber(http:Headers headers, string topic) returns error? {
     string token = check getToken(headers);
     log:printDebug("getting token for Subscriber from request", topic = topic);
-    json response = check getValidatedTokenResponse(token);
-    string roles = (check response?.response.role).toString();
-    string[] rolesArr = regex:split(roles, ",");
-    string userId = (check response?.response.userId).toString();
-    log:printDebug("received response for subscriber from auth service", userId = userId, roles = roles, topic = topic);
+    jwt:Payload response = check getValidatedTokenPayload(token);
+    json[] rolesArr = (response.hasKey(config:SECURITY_JWT_ROLES_FIELD) && response[config:SECURITY_JWT_ROLES_FIELD] is json[]) ? <json[]> response[config:SECURITY_JWT_ROLES_FIELD] : [];
+    string userId = <string> response[config:SECURITY_JWT_USERID_FIELD];
+    log:printDebug("received response for subscriber from auth service", userId = userId, roles = rolesArr, topic = topic);
     if (userId.startsWith(config:PARTNER_USER_ID_PREFIX)) {
         userId = userId.substring(config:PARTNER_USER_ID_PREFIX.length(), userId.length());
     }
@@ -57,11 +55,10 @@ public isolated function authorizeSubscriber(http:Headers headers, string topic)
 public isolated function authorizePublisher(http:Headers headers, string topic) returns error? {
     string token = check getToken(headers);
     log:printDebug("got token for publisher from request", topic = topic);
-    json response = check getValidatedTokenResponse(token);
-    string roles = (check response?.response.role).toString();
-    string userId = (check response?.response.userId).toString();
-    log:printDebug("received response for publisher from auth service", userId = userId, roles = roles, topic = topic);
-    string[] rolesArr = regex:split(roles, ",");
+    jwt:Payload response = check getValidatedTokenPayload(token);
+    json[] rolesArr = (response.hasKey(config:SECURITY_JWT_ROLES_FIELD) && response[config:SECURITY_JWT_ROLES_FIELD] is json[]) ? <json[]> response[config:SECURITY_JWT_ROLES_FIELD] : [];
+    string? userId = response.hasKey(config:SECURITY_JWT_USERID_FIELD) && response[config:SECURITY_JWT_USERID_FIELD] is string ? <string> response[config:SECURITY_JWT_USERID_FIELD] : null;
+    log:printDebug("received response for publisher from auth service", userId = userId, roles = rolesArr, topic = topic);
     string? partnerID = buildPartnerId(topic);
     string rolePrefix = buildRolePrefix(topic, "PUBLISH_");
     boolean authorized = isPublisherAuthorized(partnerID, rolePrefix, rolesArr);
@@ -70,13 +67,12 @@ public isolated function authorizePublisher(http:Headers headers, string topic) 
     }
 }
 
-// Token is extracted from the cookies header which has the key `Authorization`
+// Token is extracted from the Authorization header
 isolated function getToken(http:Headers headers) returns string|error {
-    string cookieHeader = check headers.getHeader("Cookie");
-    string[] values = regex:split(cookieHeader, "; ");
-    foreach string value in values {
-        if value.startsWith("Authorization=") {
-            return regex:split(value, "=")[1];
+    string|error authHeader = check headers.getHeader("Authorization");
+    if !(authHeader is error) {
+        if authHeader.startsWith("Bearer") {
+            return authHeader.substring("Bearer".length()).trim();
         }
     }
     return error("Authorization token cannot be found");
@@ -96,26 +92,34 @@ isolated function buildPartnerId(string topic) returns string? {
     if index is int {
         return topic.substring(0, index);
     }
+    return null;
 }
 
-isolated function getValidatedTokenResponse(string token) returns json|error {
-    map<string> headerMap = {
-        "Cookie": "Authorization=".concat(token)
+isolated function getValidatedTokenPayload(string token) returns jwt:Payload|jwt:Error {
+    jwt:ValidatorConfig validatorConfig = {
+        issuer: config:SECURITY_JWT_ISSUER,
+        signatureConfig: {
+            jwksConfig: {
+                url: config:SECURITY_JWT_ISSUER_JWKS_URL,
+                cacheConfig: {
+                    defaultMaxAge: config:SECURITY_JWT_ISSUER_JWKS_MAX_AGE
+                }
+            }
+        }
     };
-    json response = check clientEP->get(config:MOSIP_AUTH_VALIDATE_TOKEN_URL, headers = headerMap);
-    return response;
+    return jwt:validate(token, validatorConfig);
 }
 
-isolated function isPublisherAuthorized(string? partnerID, string rolePrefix, string[] rolesArr) returns boolean {
+isolated function isPublisherAuthorized(string? partnerID, string rolePrefix, json[] rolesArr) returns boolean {
     if partnerID is string {
-        foreach string role in rolesArr {
-            if role == rolePrefix.concat(SUFFIX_ALL_INDIVIDUAL) {
+        foreach json role in rolesArr {
+            if role.toString() == rolePrefix.concat(SUFFIX_ALL_INDIVIDUAL) {
                 return true;
             }
         }
     } else {
-        foreach string role in rolesArr {
-            if role == rolePrefix.concat(SUFFIX_GENERAL) {
+        foreach json role in rolesArr {
+            if role.toString() == rolePrefix.concat(SUFFIX_GENERAL) {
                 return true;
             }
         }
@@ -123,17 +127,17 @@ isolated function isPublisherAuthorized(string? partnerID, string rolePrefix, st
     return false;
 }
 
-isolated function isSubscriberAuthorized(string? partnerID, string rolePrefix, string[] rolesArr, string userId)
+isolated function isSubscriberAuthorized(string? partnerID, string rolePrefix, json[] rolesArr, string userId)
                                         returns boolean {
     if partnerID is string {
-        foreach string role in rolesArr {
-            if role == rolePrefix.concat(SUFFIX_INDIVIDUAL) && partnerID == userId {
+        foreach json role in rolesArr {
+            if role.toString() == rolePrefix.concat(SUFFIX_INDIVIDUAL) && partnerID == userId {
                 return true;
             }
         }
     } else {
-        foreach string role in rolesArr {
-            if role == rolePrefix.concat(SUFFIX_GENERAL) {
+        foreach json role in rolesArr {
+            if role.toString() == rolePrefix.concat(SUFFIX_GENERAL) {
                 return true;
             }
         }

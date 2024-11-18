@@ -19,6 +19,22 @@ import kafkaHub.util;
 # Flag to check whether to enable/disable security
 public configurable boolean SECURITY_ON = true;
 
+# Security: JWT Issuer URL
+public configurable string SECURITY_JWT_ISSUER = "";
+
+# Security: JWKS Url for the configured issuer
+public configurable string SECURITY_JWT_ISSUER_JWKS_URL = "";
+
+# Security: Maximum age of JWKs before they are fetched again
+public configurable decimal SECURITY_JWT_ISSUER_JWKS_MAX_AGE = 86400;
+
+# Security: Maximum age of JWKs before they are fetched again
+public configurable string SECURITY_JWT_USERID_FIELD = "preferred_username";
+
+# Security: Maximum age of JWKs before they are fetched again
+public configurable string SECURITY_JWT_ROLES_FIELD = "groups";
+
+
 # Server ID is is used to uniquely identify each server 
 # Each server must have a unique ID
 public configurable string SERVER_ID = "server-1";
@@ -57,12 +73,6 @@ public configurable int MESSAGE_DELIVERY_COUNT = 3;
 
 # The message delivery timeout
 public configurable decimal MESSAGE_DELIVERY_TIMEOUT = 10;
-
-# The base URL of IDP
-public configurable string MOSIP_AUTH_BASE_URL = "https://host/";
-
-# The token validation URL of IDP
-public configurable string MOSIP_AUTH_VALIDATE_TOKEN_URL = "https://host/oauth2/token";
 
 # The token validation URL of IDP
 public configurable int DISK_SPACE_THRESHOLD = 10485760;

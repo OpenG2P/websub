@@ -1,6 +1,6 @@
 # Websub
-[![Ballerina Build and push](https://github.com/mosip/websub/actions/workflows/push_trigger.yml/badge.svg?branch=release-1.2.0.1)](https://github.com/mosip/websub/actions/workflows/push_trigger.yml)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?branch=release-1.2.0.1&project=mosip_websub&metric=alert_status)](https://sonarcloud.io/dashboard?branch=release-1.2.0.1&id=mosip_websub)
+[![Ballerina Build and push](https://github.com/mosip/websub/actions/workflows/push_trigger.yml/badge.svg?branch=develop)](https://github.com/mosip/websub/actions/workflows/push_trigger.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?branch=develop&project=mosip_websub&metric=alert_status)](https://sonarcloud.io/dashboard?branch=develop&id=mosip_websub)
 
 ## Overview
 For an overview of Websub refer [MOSIP Docs](https://nayakrounak.gitbook.io/mosip-docs/modules/websub).
@@ -37,10 +37,10 @@ To integrate any kafka(either local or remote) with hub following properties nee
  - KAFKA_BOOTSTRAP_NODE
 
 ### Starting the IDP
-After starting IDP and Auth service following properties need to updated in both websub service.
+After starting IDP and Auth service following properties need to be updated in both websub service.
 
- - MOSIP_AUTH_BASE_URL
- - MOSIP_AUTH_VALIDATE_TOKEN_URL
+ - SECURITY_JWT_ISSUER
+ - SECURITY_JWT_ISSUER_JWKS_URL
 
 ### Starting the Consolidator Service
 Once previous servers are up and running the Event Consolidator Service could be started. 
@@ -57,6 +57,7 @@ NOTE: ballerina should be present in your local system [(Download ballerina)](ht
 
  - Build:
     ```
+    cd consolidator/
     bal build
     ```
 

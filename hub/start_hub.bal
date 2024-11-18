@@ -26,6 +26,7 @@ import kafkaHub.config;
 import kafkaHub.internal_topic_helper as internalTopicHelper;
 import ballerina/lang.array;
 import ballerina/crypto;
+import ballerina/lang.runtime;
 
 isolated map<websubhub:TopicRegistration> registeredTopicsCache = {};
 isolated map<websubhub:VerifiedSubscription> subscribersCache = {};
@@ -50,17 +51,19 @@ public function main() returns error? {
     }
 
     // Initialize the Hub
-    _ = @strand {thread: "any"} start syncRegsisteredTopicsCache();
+    syncRegsisteredTopicsCache();
     _ = @strand {thread: "any"} start syncSubscribersCache();
 
     // Start the Hub
+    log:printInfo("Hub initialization done and starting the hub...");
+
     http:Listener httpListener = check new (config:HUB_PORT);
     check httpListener.attach(healthCheckService, "hub/actuator/health");
     websubhub:Listener hubListener = check new (httpListener);
     check hubListener.attach(hubService, "hub");
-    check hubListener.'start();
+    websubhub:Error? websubError = check hubListener.'start();
+    runtime:registerListener(hubListener);
 }
-
 
 function validateConfigs() returns boolean|error {
     if (config:HUB_SECRET_ENCRYPTION_KEY_FORMAT.equalsIgnoreCaseAscii("base64-encoded-bytes")){
@@ -92,9 +95,9 @@ function syncRegsisteredTopicsCache() {
 }
 
 function getPersistedTopics() returns websubhub:TopicRegistration[]|error? {
-    kafka:ConsumerRecord[] records = check conn:registeredTopicsConsumer->poll(config:POLLING_INTERVAL);
+    kafka:BytesConsumerRecord[] records = check conn:registeredTopicsConsumer->poll(config:POLLING_INTERVAL);
     if records.length() > 0 {
-        kafka:ConsumerRecord lastRecord = records.pop();
+        kafka:BytesConsumerRecord lastRecord = records.pop();
         string|error lastPersistedData = string:fromBytes(lastRecord.value);
         if lastPersistedData is string {
             return deSerializeTopicsMessage(lastPersistedData);
@@ -148,9 +151,9 @@ function syncSubscribersCache() {
 }
 
 function getPersistedSubscribers() returns websubhub:VerifiedSubscription[]|error? {
-    kafka:ConsumerRecord[] records = check conn:subscribersConsumer->poll(config:POLLING_INTERVAL);
+    kafka:BytesConsumerRecord[] records = check conn:subscribersConsumer->poll(config:POLLING_INTERVAL);
     if records.length() > 0 {
-        kafka:ConsumerRecord lastRecord = records.pop();
+        kafka:BytesConsumerRecord lastRecord = records.pop();
         string|error lastPersistedData = string:fromBytes(lastRecord.value);
         if lastPersistedData is string {
             return deSerializeSubscribersMessage(lastPersistedData);
@@ -204,7 +207,7 @@ function startMissingSubscribers(websubhub:VerifiedSubscription[] persistedSubsc
                 byte[] cipher = ivAppendedCipherText.slice(0, cipherLength-16);
                 byte[] iv = ivAppendedCipherText.slice(cipherLength-16, cipherLength);
                 string encryptionKey = config:HUB_SECRET_ENCRYPTION_KEY;
-                byte[] plainText = check crypto:decryptAesGcm(cipher, encryptionKey.toBytes(), iv);
+                byte[] plainText = check crypto:decryptAesGcm(cipher, encryptionKey.toBytes(), iv, crypto:NONE);
                 subscriber.hubSecret = check string:fromBytes(plainText);
                 log:printInfo("Decrypted the hubSecret", topic = subscriber.hubTopic);
             }
@@ -226,7 +229,7 @@ isolated function pollForNewUpdates(websubhub:HubClient clientEp, kafka:Consumer
     do {
         log:printInfo("pollForNewUpdates operation - Thread started ", topic = topicName, callback = callback);
         while true {
-            kafka:ConsumerRecord[] records = check consumerEp->poll(config:POLLING_INTERVAL);
+            kafka:BytesConsumerRecord[] records = check consumerEp->poll(config:POLLING_INTERVAL);
             log:printDebug("pollForNewUpdates operation - records pull ", length = records.length(), subscriberId = subscriberId);
              if !isValidConsumer(topicName, subscriberId, callback) {
                 fail error(string `Subscriber with Id ${subscriberId} or topic ${topicName} and ${callback} is invalid`);
@@ -263,12 +266,12 @@ isolated function isValidConsumer(string topicName, string subscriberId, string 
     return topicAvailable && subscriberAvailable;
 }
 
-isolated function notifySubscribers(kafka:ConsumerRecord[] records, websubhub:HubClient clientEp, kafka:Consumer consumerEp, string topic, string callback) returns error? {
-    foreach kafka:ConsumerRecord kafkaRecord in records {
+isolated function notifySubscribers(kafka:BytesConsumerRecord[] records, websubhub:HubClient clientEp, kafka:Consumer consumerEp, string topic, string callback) returns error? {
+    foreach kafka:BytesConsumerRecord kafkaRecord in records {
         websubhub:ContentDistributionMessage|error message = deSerializeKafkaRecord(kafkaRecord);
 
         if (message is websubhub:ContentDistributionMessage) {
-            log:printDebug("notifying subscriber with message", message = message.cloneReadOnly(), topic = topic, callback = callback, offset = kafkaRecord.offset);
+            log:printDebug("notifying subscriber with message", contentDistributionMessage = message.cloneReadOnly(), topic = topic, callback = callback, offset = kafkaRecord.offset);
             websubhub:ContentDistributionSuccess|websubhub:SubscriptionDeletedError|websubhub:Error response = clientEp->notifyContentDistribution(message);
             if (response is websubhub:SubscriptionDeletedError) {
                 log:printError("Subscription Deletion Error occurred while sending notification to subscriber ", topic = topic, callback = callback, offset = kafkaRecord.offset,response = response.cloneReadOnly().toString());
@@ -295,7 +298,7 @@ isolated function notifySubscribers(kafka:ConsumerRecord[] records, websubhub:Hu
     }
 }
 
-isolated function deSerializeKafkaRecord(kafka:ConsumerRecord kafkaRecord) returns websubhub:ContentDistributionMessage|error {
+isolated function deSerializeKafkaRecord(kafka:BytesConsumerRecord kafkaRecord) returns websubhub:ContentDistributionMessage|error {
     byte[] content = kafkaRecord.value;
     string|error message = check string:fromBytes(content);
     if (message is string) {
