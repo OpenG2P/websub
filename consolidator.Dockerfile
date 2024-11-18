@@ -44,6 +44,5 @@ ENV consolidator_config_file_url_env=${consolidator_config_url}
 USER ${container_user}
 EXPOSE 9192
 
-#TODO Link to be parameterized instead of hardcoding
 CMD wget -q --show-progress "${consolidator_config_file_url_env}" -O Config.toml; \
     java -jar -Xms256m -Xmx2048m ./consolidator.jar

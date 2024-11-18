@@ -57,6 +57,7 @@ NOTE: ballerina should be present in your local system [(Download ballerina)](ht
 
  - Build:
     ```
+    cd consolidator/
     bal build
     ```
 
