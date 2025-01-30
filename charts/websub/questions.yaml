@@ -17,4 +17,4 @@ questions:
   description: Name of existing Kafka Service or Statefulset
   type: string
   label: Existing Kafka Installation Name
-  shwo_if: "kafka.enabled=false"
+  show_if: "kafka.enabled=false"
