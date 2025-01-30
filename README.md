@@ -37,7 +37,7 @@ To integrate any kafka(either local or remote) with hub following properties nee
  - KAFKA_BOOTSTRAP_NODE
 
 ### Starting the IDP
-After starting IDP and Auth service following properties need to updated in both websub service.
+After starting IDP and Auth service following properties need to be updated in both websub service.
 
  - SECURITY_JWT_ISSUER
  - SECURITY_JWT_ISSUER_JWKS_URL
@@ -57,6 +57,7 @@ NOTE: ballerina should be present in your local system [(Download ballerina)](ht
 
  - Build:
     ```
+    cd consolidator/
     bal build
     ```
 
